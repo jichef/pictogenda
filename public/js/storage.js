@@ -123,8 +123,8 @@
       }).then(function (cfg) {
         res.cfg = cfg;
         /* Imágenes subidas */
-        var jobs = cfg.customPictos.map(function (p) {
-          return idbGet('images', p.id).then(function (d) { if (typeof d === 'string') { HV.images[p.id] = d; } });
+        var jobs = HV.imageIds(cfg).map(function (iid) {
+          return idbGet('images', iid).then(function (d) { if (typeof d === 'string') { HV.images[iid] = d; } });
         });
         return Promise.all(jobs);
       }).then(function () { return res; });
@@ -184,7 +184,7 @@
 
     exportAll: function (cfg) {
       var images = {};
-      cfg.customPictos.forEach(function (p) { if (HV.images[p.id]) { images[p.id] = HV.images[p.id]; } });
+      HV.imageIds(cfg).forEach(function (iid) { if (HV.images[iid]) { images[iid] = HV.images[iid]; } });
       return { format: 'horario-visual-backup', version: HV.SCHEMA_VERSION, exportedAt: new Date().toISOString(), config: cfg, images: images };
     },
 
@@ -196,9 +196,9 @@
       if (!cfg) { throw new Error('El archivo no contiene un horario válido.'); }
       var images = {};
       if (obj && obj.images && typeof obj.images === 'object') {
-        cfg.customPictos.forEach(function (p) {
-          var d = obj.images[p.id];
-          if (typeof d === 'string' && /^data:image\//.test(d)) { images[p.id] = d; }
+        HV.imageIds(cfg).forEach(function (iid) {
+          var d = obj.images[iid];
+          if (typeof d === 'string' && /^data:image\//.test(d)) { images[iid] = d; }
         });
       }
       return { cfg: cfg, images: images };

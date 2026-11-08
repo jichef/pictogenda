@@ -86,9 +86,15 @@
   HV.dayKey = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
 
   /* ---------- pictogramas ---------- */
+  /* Los pictogramas incorporados se pueden sustituir: cfg.overrides[id] = {name, imageId}. */
   HV.findPicto = function (cfg, id) {
     var i;
-    for (i = 0; i < HV.BUILTIN_PICTOS.length; i++) { if (HV.BUILTIN_PICTOS[i].id === id) { return HV.BUILTIN_PICTOS[i]; } }
+    for (i = 0; i < HV.BUILTIN_PICTOS.length; i++) {
+      if (HV.BUILTIN_PICTOS[i].id === id) {
+        var b = HV.BUILTIN_PICTOS[i], ov = cfg && cfg.overrides && cfg.overrides[id];
+        return ov ? { id: b.id, name: ov.name || b.name, src: b.src, builtin: true } : b;
+      }
+    }
     var cp = (cfg && cfg.customPictos) || [];
     for (i = 0; i < cp.length; i++) { if (cp[i].id === id) { return cp[i]; } }
     return null;
@@ -96,8 +102,18 @@
   HV.pictoSrc = function (cfg, id) {
     var p = HV.findPicto(cfg, id);
     if (!p) { return HV.PLACEHOLDER; }
-    if (p.src) { return p.src; }
+    if (p.src) {
+      var ov = cfg && cfg.overrides && cfg.overrides[id];
+      return (ov && ov.imageId && HV.images[ov.imageId]) || p.src;
+    }
     return HV.images[id] || HV.PLACEHOLDER;
+  };
+  /* Ids de todas las imágenes guardadas en IndexedDB que usa esta configuración. */
+  HV.imageIds = function (cfg) {
+    var ids = (cfg.customPictos || []).map(function (p) { return p.id; });
+    var ov = cfg.overrides || {};
+    Object.keys(ov).forEach(function (k) { if (ov[k].imageId) { ids.push(ov[k].imageId); } });
+    return ids;
   };
   HV.pictoName = function (cfg, id) { var p = HV.findPicto(cfg, id); return p ? p.name : ''; };
 
@@ -112,6 +128,8 @@
       sameEveryDay: input.sameEveryDay === true,
       settings: {},
       customPictos: [],
+      overrides: {},
+      subjects: [],
       days: {}
     };
     var def = HV.DEFAULT_SETTINGS, s = input.settings || {}, k;
@@ -130,6 +148,29 @@
       if (p && typeof p.id === 'string' && p.id) { out.customPictos.push({ id: p.id, name: String(p.name || 'Imagen') }); }
     });
 
+    var bIds = HV.BUILTIN_PICTOS.map(function (p) { return p.id; });
+    var ovIn = input.overrides && typeof input.overrides === 'object' ? input.overrides : {};
+    Object.keys(ovIn).forEach(function (k) {
+      var o = ovIn[k];
+      if (bIds.indexOf(k) < 0 || !o || typeof o !== 'object') { return; }
+      var nm = typeof o.name === 'string' ? o.name : '', im = typeof o.imageId === 'string' ? o.imageId : '';
+      if (nm || im) { out.overrides[k] = { name: nm, imageId: im }; }
+    });
+    function cleanSec(list) {
+      var sec = [];
+      (Array.isArray(list) ? list : []).forEach(function (x) {
+        if (x && typeof x.pictoId === 'string' && x.pictoId) { sec.push({ pictoId: x.pictoId, label: String(x.label || '') }); }
+      });
+      return sec;
+    }
+    var usedSub = {};
+    (Array.isArray(input.subjects) ? input.subjects : []).forEach(function (x) {
+      if (!x || typeof x !== 'object') { return; }
+      var sid = typeof x.id === 'string' && x.id && !usedSub[x.id] ? x.id : HV.uid();
+      usedSub[sid] = true;
+      out.subjects.push({ id: sid, name: String(x.name === undefined ? '' : x.name), pictoId: String(x.pictoId || ''),
+        color: /^#[0-9a-fA-F]{6}$/.test(x.color || '') ? x.color : '', secondary: cleanSec(x.secondary) });
+    });
     var used = {};
     for (var d = 1; d <= 7; d++) {
       var src = input.days[d] || input.days[String(d)] || [];
@@ -138,11 +179,9 @@
         if (!a || typeof a !== 'object') { return; }
         var id = typeof a.id === 'string' && a.id && !used[a.id] ? a.id : HV.uid();
         used[id] = true;
-        var sec = [];
-        (Array.isArray(a.secondary) ? a.secondary : []).forEach(function (x) {
-          if (x && typeof x.pictoId === 'string' && x.pictoId) { sec.push({ pictoId: x.pictoId, label: String(x.label || '') }); }
-        });
+        var sec = cleanSec(a.secondary);
         list.push({
+          subjectId: typeof a.subjectId === 'string' ? a.subjectId : '',
           id: id,
           name: String(a.name === undefined ? '' : a.name),
           start: String(a.start === undefined ? '' : a.start),
@@ -174,7 +213,18 @@
   HV.scheduleFor = function (cfg, dow) {
     var key = HV.keyOfDow(dow);
     if (cfg.sameEveryDay && key <= 5) { key = 1; }
-    return HV.sortDay(cfg.days[key] || []).filter(validAct);
+    return HV.sortDay((cfg.days[key] || []).map(function (a) { return HV.resolveAct(cfg, a); })).filter(validAct);
+  };
+  /* Asignaturas: una actividad enlazada a una asignatura toma de ella nombre, pictograma, color y secundarios. */
+  HV.findSubject = function (cfg, id) {
+    var l = (cfg && cfg.subjects) || [];
+    for (var i = 0; i < l.length; i++) { if (l[i].id === id) { return l[i]; } }
+    return null;
+  };
+  HV.resolveAct = function (cfg, a) {
+    var sb = a.subjectId ? HV.findSubject(cfg, a.subjectId) : null;
+    if (!sb) { return a; }
+    return { id: a.id, subjectId: a.subjectId, start: a.start, end: a.end, name: sb.name, pictoId: sb.pictoId, color: sb.color, secondary: sb.secondary };
   };
   HV.nextSchoolDay = function (cfg, dow) {
     for (var i = 1; i <= 7; i++) {

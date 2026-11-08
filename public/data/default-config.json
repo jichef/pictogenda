@@ -17,6 +17,76 @@
     "milestoneEffect": true
   },
   "customPictos": [],
+  "subjects": [
+    {
+      "id": "s-mat",
+      "name": "Matemáticas",
+      "pictoId": "b-matematicas",
+      "color": "#e8505b",
+      "secondary": [
+        {
+          "pictoId": "b-calculo",
+          "label": "Cálculo"
+        },
+        {
+          "pictoId": "b-problemas",
+          "label": "Problemas"
+        },
+        {
+          "pictoId": "b-cuaderno",
+          "label": "Cuaderno"
+        },
+        {
+          "pictoId": "b-material",
+          "label": "Material"
+        }
+      ]
+    },
+    {
+      "id": "s-len",
+      "name": "Lengua",
+      "pictoId": "b-lengua",
+      "color": "#2a9d8f",
+      "secondary": [
+        {
+          "pictoId": "b-lectura",
+          "label": "Lectura"
+        },
+        {
+          "pictoId": "b-cuaderno",
+          "label": "Cuaderno"
+        }
+      ]
+    },
+    {
+      "id": "s-rec",
+      "name": "Recreo",
+      "pictoId": "b-recreo",
+      "color": "#f4a261",
+      "secondary": []
+    },
+    {
+      "id": "s-cie",
+      "name": "Ciencias",
+      "pictoId": "b-ciencias",
+      "color": "#5a9e3a",
+      "secondary": []
+    },
+    {
+      "id": "s-ing",
+      "name": "Inglés",
+      "pictoId": "b-ingles",
+      "color": "#6c63c7",
+      "secondary": []
+    },
+    {
+      "id": "s-pla",
+      "name": "Plástica",
+      "pictoId": "b-plastica",
+      "color": "#d6609b",
+      "secondary": []
+    }
+  ],
   "days": {
     "1": [
       {
@@ -43,7 +113,8 @@
             "pictoId": "b-material",
             "label": "Material"
           }
-        ]
+        ],
+        "subjectId": "s-mat"
       },
       {
         "id": "len",
@@ -61,7 +132,8 @@
             "pictoId": "b-cuaderno",
             "label": "Cuaderno"
           }
-        ]
+        ],
+        "subjectId": "s-len"
       },
       {
         "id": "rec",
@@ -70,7 +142,8 @@
         "end": "11:30",
         "pictoId": "b-recreo",
         "color": "#f4a261",
-        "secondary": []
+        "secondary": [],
+        "subjectId": "s-rec"
       },
       {
         "id": "cie",
@@ -79,7 +152,8 @@
         "end": "12:30",
         "pictoId": "b-ciencias",
         "color": "#5a9e3a",
-        "secondary": []
+        "secondary": [],
+        "subjectId": "s-cie"
       },
       {
         "id": "ing",
@@ -88,7 +162,8 @@
         "end": "13:30",
         "pictoId": "b-ingles",
         "color": "#6c63c7",
-        "secondary": []
+        "secondary": [],
+        "subjectId": "s-ing"
       },
       {
         "id": "pla",
@@ -97,7 +172,8 @@
         "end": "14:00",
         "pictoId": "b-plastica",
         "color": "#d6609b",
-        "secondary": []
+        "secondary": [],
+        "subjectId": "s-pla"
       }
     ],
     "2": [],

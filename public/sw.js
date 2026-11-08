@@ -2,7 +2,7 @@
  * Estrategia: caché primero con actualización en segundo plano (stale-while-revalidate).
  * Solo toca la Cache Storage; NUNCA toca localStorage ni IndexedDB (los datos del usuario).
  * Límite: Safari puede vaciar esta caché si necesita espacio o tras tiempo sin uso. */
-var VERSION = '6308be49';
+var VERSION = '73d00e96';
 var CACHE = 'hv-cache-' + VERSION;
 var ASSETS = /*ASSETS*/[
  "./",

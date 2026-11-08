@@ -130,3 +130,12 @@ input[type=range] { width: 14em; vertical-align: middle; }
 
 /* Tipografía normal del sistema en configuración, vista previa y ventanas (la fuente propia es solo para el kiosco) */
 #adminRoot, #modalRoot, .pv-bar { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; }
+
+/* Asignaturas */
+.thumb.static { padding: .4em; }
+.name-ro { font-size: 18px; font-weight: 800; margin: .1em 0 .5em; }
+.in-subject { width: 100%; margin-bottom: .6em; }
+.sec-ro { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; }
+.sec-ro-item { text-align: center; margin: .2em .6em .2em 0; font-size: .75em; color: var(--muted); }
+.sec-ro-item img { width: 3em; height: 3em; display: block; margin: 0 auto .1em; border-radius: .5em; }
+@media (max-width: 1100px) { .adm-tabs .btn.tab { padding: .2em .45em; } }

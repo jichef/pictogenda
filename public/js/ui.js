@@ -96,7 +96,7 @@
         onclick: function () { m.close(); cb(p.id); }
       }, [UI.h('img', { src: HV.pictoSrc(cfg, p.id), alt: '' }), UI.h('span', { text: p.name })]);
     }
-    HV.BUILTIN_PICTOS.forEach(function (p) { grid.appendChild(item(p)); });
+    HV.BUILTIN_PICTOS.forEach(function (p) { grid.appendChild(item({ id: p.id, name: HV.pictoName(cfg, p.id) })); });
     cfg.customPictos.forEach(function (p) { grid.appendChild(item(p)); });
     m = UI.modal([
       UI.h('h2', { text: 'Elegir pictograma' }),

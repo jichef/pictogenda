@@ -40,6 +40,17 @@ t('sábado y domingo con horario propio (sin afectar a «mismo horario» L-V)', 
   var s2 = HV.getState(c, at(2026, 11, 14, 8, 0, 0)); assert.equal(s2.type, 'before');
   var s3 = HV.getState(c, at(2026, 11, 13, 15, 0, 0)); assert.equal(s3.nextDay.dow, 6); assert.equal(HV.dayName(6), 'Sábado'); assert.equal(HV.dayName(0), 'Domingo');
 });
+t('asignaturas: cambiar la imagen de la asignatura cambia todos los días enlazados', function () {
+  var c = HV.clone(cfg); c.sameEveryDay = false;
+  c.days[3] = [{ id: 'w', subjectId: 's-mat', name: 'viejo', start: '09:00', end: '10:00', pictoId: 'b-lengua', color: '', secondary: [] }];
+  c.subjects[0].pictoId = 'b-lectura'; c.subjects[0].name = 'Mates';
+  var lun = HV.getState(c, at(2026, 11, 9, 9, 30)).act, mie = HV.getState(c, at(2026, 11, 11, 9, 30)).act;
+  assert.equal(lun.pictoId, 'b-lectura'); assert.equal(mie.pictoId, 'b-lectura'); assert.equal(mie.name, 'Mates');
+  assert.equal(mie.secondary.length, 4); assert.equal(mie.start, '09:00');
+  c.days[3][0].subjectId = 'inexistente'; assert.equal(HV.getState(c, at(2026, 11, 11, 9, 30)).act.name, 'viejo'); /* enlace roto: usa lo propio */
+  assert.equal(HV.migrate(JSON.parse(JSON.stringify(c))).subjects.length, 6);
+  assert.equal(HV.migrate({ days: {} }).subjects.length, 0); /* configs antiguas sin asignaturas */
+});
 t('huecos horarios: pantalla de espera', function () {
   var c = HV.clone(cfg); c.days[1] = [c.days[1][0], c.days[1][2]]; /* 9-10 y 11-11:30 */
   var s = HV.getState(c, at(2026, 11, 9, 10, 30, 0)); assert.equal(s.type, 'gap'); assert.equal(s.next.id, 'rec'); near(s.toNext, 1800);

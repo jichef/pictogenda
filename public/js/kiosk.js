@@ -16,6 +16,7 @@
   var reduceMotion = false, clock = null;
   function nowDate() { return clock ? clock() : new Date(); }
   var timer = null;
+  var MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   var SIZES = { medium: 0.7, large: 0.88, xlarge: 1 };
 
   function $(id) { return document.getElementById(id); }
@@ -27,7 +28,7 @@
 
   function init() {
     ['main', 'content', 'actName', 'stage', 'pbox', 'pimg', 'coverClip', 'cover', 'marks', 'secondary', 'info', 'times', 'counterWrap',
-      'counterLabel', 'counter', 'nextCard', 'pbar', 'pbarFill', 'side', 'sideList', 'gear', 'warn', 'subtitle'].forEach(function (id) { els[id] = $(id); });
+      'counterLabel', 'counter', 'nextCard', 'pbar', 'pbarFill', 'sideScroll', 'dayName', 'dayDate', 'sideList', 'gear', 'warn', 'subtitle'].forEach(function (id) { els[id] = $(id); });
     try { reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { reduceMotion = false; }
     /* marcas fijas (25/50/75) */
     HV.MARKS.forEach(function (m) {
@@ -119,6 +120,11 @@
     els.pbox.className = '';
     UI.clear(els.secondary);
     UI.clear(els.nextCard);
+    /* color de la actividad: fondo suave, halo del pictograma y subrayado del título */
+    var acc = (a && a.color) ? a.color : '#7d8aa3', rs = document.documentElement.style;
+    rs.setProperty('--acc', acc); rs.setProperty('--acc-soft', HV.hexToRgba(acc, 0.22)); rs.setProperty('--acc-bg', HV.hexToRgba(acc, 0.1));
+    var dd = new Date(st.dayKey.replace(/-/g, '/') + ' 12:00');
+    text(els.dayName, HV.dayName(st.dow)); text(els.dayDate, dd.getDate() + ' de ' + MONTHS[dd.getMonth()]);
     show(els.coverClip, active);
     show(els.pbar, active && s.showProgressBar && s.showInfoBar);
     show(els.info, s.showInfoBar || !active); /* en pantallas de espera se muestra siempre: dice qué viene */
@@ -135,7 +141,6 @@
       var mk = 'url("' + els.pimg.src.replace(/"/g, '%22') + '")';
       els.coverClip.style.webkitMaskImage = mk; els.coverClip.style.maskImage = mk;
       els.pimg.alt = a.name;
-      els.actName.style.color = a.color || '';
       text(els.times, timesText(a));
       text(els.counterLabel, 'Quedan');
       (a.secondary || []).forEach(function (sx) {
@@ -147,9 +152,8 @@
       els.secondary.className = 'secondary n' + Math.min((a.secondary || []).length, 7);
     } else {
       els.secondary.className = 'secondary n0';
-      els.actName.style.color = '';
       var after = st.type === 'after' || st.type === 'weekend' || st.type === 'empty';
-      els.pimg.src = after ? 'pictos/fin.svg' : 'pictos/espera.svg';
+      els.pimg.src = HV.pictoSrc(cfg, after ? 'b-fin' : 'b-espera');
       els.pimg.alt = '';
       text(els.times, '');
       if (st.type === 'before') { text(els.actName, 'Todavía no empezamos'); text(els.subtitle, 'La primera actividad será a las ' + st.next.start); text(els.counterLabel, 'Falta'); }
@@ -186,7 +190,7 @@
     UI.clear(els.sideList);
     var s = cfg.settings;
     st.list.forEach(function (a) {
-      els.sideList.appendChild(h('div', { 'class': 'side-item pending', 'data-id': a.id }, [
+      els.sideList.appendChild(h('div', { 'class': 'side-item pending', 'data-id': a.id, style: a.color ? '--ic:' + a.color : '' }, [
         h('img', { src: HV.pictoSrc(cfg, a.pictoId), alt: '' }),
         h('div', { 'class': 'side-text' }, [
           h('div', { 'class': 'side-name', text: a.name }),
@@ -272,7 +276,7 @@
       lastSideCurrent = curIdx;
       if (curIdx >= 0) {
         var node = items[curIdx];
-        els.side.scrollTop = Math.max(0, node.offsetTop - (els.side.clientHeight - node.offsetHeight) / 2);
+        els.sideScroll.scrollTop = Math.max(0, node.offsetTop - (els.sideScroll.clientHeight - node.offsetHeight) / 2);
       }
     }
   }

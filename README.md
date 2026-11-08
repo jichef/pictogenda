@@ -36,6 +36,11 @@ npm run build      # regenera la lista de precarga del service worker (Vercel lo
 ## Añadir a la pantalla de inicio (iOS 12)
 Safari › abre la URL › botón Compartir › **Añadir a pantalla de inicio**. Ábrela desde el icono para modo standalone. Recomendado: Ajustes › Pantalla › Bloqueo automático = Nunca, y **Acceso guiado** (Ajustes › General › Accesibilidad) para impedir salir de la app. La web no puede ocultar las barras de Safari ni mantener la pantalla encendida en iOS 12.
 
+## Asignaturas
+En *Ajustes › Asignaturas* defines cada asignatura una vez (nombre, imagen, color y pictogramas secundarios). Cada franja de cualquier día puede enlazarse a una asignatura: si cambias su imagen, cambia en todos los días. Si ya tenías actividades sueltas, el botón «Crear asignaturas a partir de mis actividades» las agrupa por nombre. Las imágenes pueden ser las incorporadas o las que subas.
+
+Los pictogramas **incorporados también se pueden sustituir**: en *Pictogramas › Incorporados* cambia la imagen o el nombre de cualquiera (y «Restaurar original» lo devuelve). Se guarda como sustitución local y se incluye en las copias de seguridad.
+
 ## Fuente tipográfica propia
 Copia el archivo `.ttf` como `public/fonts/horario.ttf` (y opcionalmente `horario-bold.ttf` para negrita), ejecuta `npm run build` y despliega. Se carga desde el propio sitio, se guarda en la caché sin conexión y Safari de iOS 12 admite TTF. Comprueba que su licencia permite incrustarla en una web. Los pictogramas incorporados son emoji y no cambian con la fuente.
 

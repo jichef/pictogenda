@@ -24,7 +24,7 @@
   function validateAll() {
     var errors = [], warnings = [];
     usedKeys().forEach(function (k) {
-      var r = HV.validateDay(draft.days[k]), label = keyLabel(k);
+      var r = HV.validateDay(draft.days[k].map(function (x) { return HV.resolveAct(draft, x); })), label = keyLabel(k);
       r.errors.forEach(function (m) { errors.push(label + ': ' + m); });
       r.warnings.forEach(function (m) { warnings.push(label + ': ' + m); });
     });
@@ -51,7 +51,8 @@
   }
   function closeAdmin() {
     /* Descarta imágenes subidas que no llegaron a guardarse. */
-    uploadedIds.forEach(function (id) { if (!saved.customPictos.some(function (p) { return p.id === id; })) { HV.store.deleteImage(id); } });
+    var keep = HV.imageIds(saved);
+    uploadedIds.forEach(function (id) { if (keep.indexOf(id) < 0) { HV.store.deleteImage(id); } });
     root.style.display = 'none'; UI.clear(root);
     HV.app.onAdminClosed();
   }
@@ -63,7 +64,7 @@
   function render() {
     UI.clear(root);
     dirtyBadge = h('span', { 'class': 'dirty' });
-    var tabs = [['schedule', 'Horarios'], ['pictos', 'Pictogramas'], ['look', 'Apariencia'], ['data', 'Datos y copias']];
+    var tabs = [['schedule', 'Horarios'], ['subjects', 'Asignaturas'], ['pictos', 'Pictogramas'], ['look', 'Apariencia'], ['data', 'Datos y copias']];
     var head = h('div', { 'class': 'adm-head' }, [
       h('div', { 'class': 'adm-title', text: 'Ajustes' }),
       h('div', { 'class': 'adm-tabs' }, tabs.map(function (t) {
@@ -78,7 +79,7 @@
     valBox = h('div', { 'class': 'val-box' });
     body = h('div', { 'class': 'adm-body scrollable' });
     root.appendChild(head); root.appendChild(valBox); root.appendChild(body);
-    ({ schedule: renderSchedule, pictos: renderPictos, look: renderLook, data: renderData })[tab]();
+    ({ schedule: renderSchedule, subjects: renderSubjects, pictos: renderPictos, look: renderLook, data: renderData })[tab]();
     refreshStatus();
   }
 
@@ -155,7 +156,8 @@
       else if (!res.ls || !res.idb) { UI.toast('Guardado, pero solo en ' + (res.ls ? 'localStorage' : 'IndexedDB') + ' (el otro almacén falló).', 'warn'); }
       else { UI.toast('Guardado y verificado ✓', 'ok'); }
       /* borra imágenes de pictogramas eliminados */
-      saved.customPictos.forEach(function (p) { if (!res.cfg.customPictos.some(function (q) { return q.id === p.id; })) { HV.store.deleteImage(p.id); } });
+      var keepIds = HV.imageIds(res.cfg);
+      HV.imageIds(saved).forEach(function (iid) { if (keepIds.indexOf(iid) < 0) { HV.store.deleteImage(iid); } });
       saved = HV.clone(res.cfg); draft = HV.clone(res.cfg); uploadedIds = [];
       HV.app.applyConfig(res.cfg, res);
       render();
@@ -194,7 +196,7 @@
     }
 
     var list = acts();
-    list.forEach(function (a, i) { body.appendChild(actCard(list, a, i)); });
+    list.forEach(function (a, i) { body.appendChild(entryCard(list, a, i, 'act')); });
     if (!list.length) { body.appendChild(h('p', { 'class': 'hint', text: 'No hay actividades. Pulsa «Añadir actividad».' })); }
     body.appendChild(btn('+ Añadir actividad', function () {
       var last = HV.sortDay(list).filter(function (x) { return isFinite(HV.parseTime(x.end)); }).pop();
@@ -218,12 +220,20 @@
     render();
   }
 
-  function actCard(list, a, i) {
-    var card = h('div', { 'class': 'card act', style: 'border-left-color:' + (a.color || '#c9d3e4') });
-    var thumb = h('button', { 'class': 'thumb', type: 'button', onclick: function () {
-      pick(function (id) { a.pictoId = id; render(); }, a.pictoId);
-    } }, [h('img', { src: HV.pictoSrc(draft, a.pictoId), alt: '' }), h('span', { text: 'Cambiar' })]);
-    var name = h('input', { type: 'text', value: a.name, 'class': 'in-name', placeholder: 'Nombre', oninput: function () { a.name = this.value; refreshStatus(); } });
+  /* Tarjeta de actividad (mode 'act') o de asignatura (mode 'subject'). */
+  function entryCard(list, a, i, mode) {
+    var isSub = mode === 'subject';
+    var sb = (!isSub && a.subjectId) ? HV.findSubject(draft, a.subjectId) : null;
+    var view = sb || a;
+    var card = h('div', { 'class': 'card act', style: 'border-left-color:' + (view.color || '#c9d3e4') });
+    var thumb = sb
+      ? h('div', { 'class': 'thumb static' }, h('img', { src: HV.pictoSrc(draft, view.pictoId), alt: '' }))
+      : h('button', { 'class': 'thumb', type: 'button', onclick: function () {
+        pick(function (id) { a.pictoId = id; render(); }, a.pictoId);
+      } }, [h('img', { src: HV.pictoSrc(draft, a.pictoId), alt: '' }), h('span', { text: 'Cambiar imagen' })]);
+    var name = sb
+      ? h('div', { 'class': 'name-ro', text: view.name || '(sin nombre)' })
+      : h('input', { type: 'text', value: a.name, 'class': 'in-name', placeholder: isSub ? 'Nombre de la asignatura' : 'Nombre', oninput: function () { a.name = this.value; refreshStatus(); } });
     function timeIn(field) {
       return h('input', { type: 'time', value: a[field], 'class': 'in-time', onchange: function () { a[field] = this.value; refreshStatus(); }, oninput: function () { a[field] = this.value; refreshStatus(); } });
     }
@@ -232,25 +242,54 @@
     ].concat(SWATCHES.map(function (c) {
       return h('button', { 'class': 'sw' + (a.color === c ? ' on' : ''), type: 'button', style: 'background:' + c, onclick: function () { a.color = c; render(); } });
     })));
+    var subjSel = null;
+    if (!isSub && draft.subjects.length) {
+      subjSel = h('select', { 'class': 'in-subject', onchange: function () {
+        var v = this.value;
+        if (!v) { a.subjectId = ''; }
+        else { var s = HV.findSubject(draft, v); a.subjectId = v; a.name = s.name; a.pictoId = s.pictoId; a.color = s.color; a.secondary = HV.clone(s.secondary); }
+        render();
+      } }, [h('option', { value: '', text: 'Asignatura: ninguna (personalizada)', selected: !a.subjectId })].concat(draft.subjects.map(function (s) {
+        return h('option', { value: s.id, text: 'Asignatura: ' + (s.name || '(sin nombre)'), selected: a.subjectId === s.id });
+      })));
+    }
+    function swap(d) { var j = i + d; if (j < 0 || j >= list.length) { return; } var t = list[i]; list[i] = list[j]; list[j] = t; render(); }
     var tools = h('div', { 'class': 'tools' }, [
-      btn('▲', function () { moveAct(list, i, -1); }, 'sq', { disabled: i === 0, 'aria-label': 'Subir' }),
-      btn('▼', function () { moveAct(list, i, 1); }, 'sq', { disabled: i === list.length - 1, 'aria-label': 'Bajar' }),
+      btn('▲', function () { if (isSub) { swap(-1); } else { moveAct(list, i, -1); } }, 'sq', { disabled: i === 0, 'aria-label': 'Subir' }),
+      btn('▼', function () { if (isSub) { swap(1); } else { moveAct(list, i, 1); } }, 'sq', { disabled: i === list.length - 1, 'aria-label': 'Bajar' }),
       btn('Duplicar', function () {
         var c = HV.clone(a); c.id = HV.uid(); c.name = a.name + ' (copia)'; list.splice(i + 1, 0, c); render();
       }, ''),
-      btn('Eliminar', function () { if (window.confirm('¿Eliminar «' + (a.name || 'actividad') + '»?')) { list.splice(i, 1); render(); } }, 'danger')
+      btn('Eliminar', function () {
+        if (!window.confirm('¿Eliminar «' + (a.name || (isSub ? 'asignatura' : 'actividad')) + '»?')) { return; }
+        if (isSub) { /* las actividades que la usaban conservan su aspecto actual */
+          for (var d = 1; d <= 7; d++) {
+            draft.days[d].forEach(function (x) {
+              if (x.subjectId === a.id) { x.subjectId = ''; x.name = a.name; x.pictoId = a.pictoId; x.color = a.color; x.secondary = HV.clone(a.secondary); }
+            });
+          }
+        }
+        list.splice(i, 1); render();
+      }, 'danger')
     ]);
-    card.appendChild(h('div', { 'class': 'act-main' }, [
-      thumb,
-      h('div', { 'class': 'act-fields' }, [
-        name,
-        h('div', { 'class': 'row' }, [h('label', { text: 'Inicio ' }, timeIn('start')), h('label', { text: 'Fin ' }, timeIn('end'))]),
-        colors
-      ]),
-      tools
-    ]));
+    var fields = [subjSel, name];
+    if (!isSub) { fields.push(h('div', { 'class': 'row' }, [h('label', { text: 'Inicio ' }, timeIn('start')), h('label', { text: 'Fin ' }, timeIn('end'))])); }
+    if (sb) { fields.push(btn('Editar esta asignatura…', function () { tab = 'subjects'; render(); }, 'ghost')); }
+    else { fields.push(colors); }
+    card.appendChild(h('div', { 'class': 'act-main' }, [thumb, h('div', { 'class': 'act-fields' }, fields), tools]));
 
     /* pictogramas secundarios */
+    if (sb) {
+      if (sb.secondary.length) {
+        card.appendChild(h('div', { 'class': 'sec-edit' }, [
+          h('div', { 'class': 'sec-title', text: 'Pictogramas secundarios (de la asignatura)' }),
+          h('div', { 'class': 'sec-ro' }, sb.secondary.map(function (sx) {
+            return h('div', { 'class': 'sec-ro-item' }, [h('img', { src: HV.pictoSrc(draft, sx.pictoId), alt: '' }), h('span', { text: sx.label })]);
+          }))
+        ]));
+      }
+      return card;
+    }
     var sec = h('div', { 'class': 'sec-edit' }, [h('div', { 'class': 'sec-title', text: 'Pictogramas secundarios (informativos)' })]);
     a.secondary.forEach(function (sx, k) {
       sec.appendChild(h('div', { 'class': 'sec-row' }, [
@@ -267,6 +306,35 @@
     }, ''));
     card.appendChild(sec);
     return card;
+  }
+
+  /* ---------- Asignaturas ---------- */
+  function renderSubjects() {
+    body.appendChild(h('p', { 'class': 'hint', text: 'Define cada asignatura una sola vez (imagen, color y pictogramas secundarios) y úsala en cualquier franja de cualquier día. Si la cambias aquí, cambia en todos los días.' }));
+    var list = draft.subjects;
+    list.forEach(function (s, i) { body.appendChild(entryCard(list, s, i, 'subject')); });
+    if (!list.length) { body.appendChild(h('p', { 'class': 'hint', text: 'Todavía no hay asignaturas.' })); }
+    body.appendChild(btn('+ Añadir asignatura', function () {
+      list.push({ id: 's' + HV.uid(), name: 'Nueva asignatura', pictoId: 'b-cuaderno', color: '', secondary: [] }); render();
+    }, 'add'));
+    var loose = 0, d;
+    for (d = 1; d <= 7; d++) { draft.days[d].forEach(function (x) { if (!x.subjectId && String(x.name).replace(/\s/g, '')) { loose++; } }); }
+    if (loose) {
+      body.appendChild(btn('Crear asignaturas a partir de mis ' + loose + ' actividades', function () {
+        if (!window.confirm('Se creará una asignatura por cada nombre distinto y se enlazarán las actividades (conservan su aspecto actual). ¿Continuar?')) { return; }
+        var byName = {};
+        list.forEach(function (s) { byName[s.name.trim().toLowerCase()] = s; });
+        for (var dd = 1; dd <= 7; dd++) {
+          draft.days[dd].forEach(function (x) {
+            var k = String(x.name).trim().toLowerCase();
+            if (x.subjectId || !k) { return; }
+            if (!byName[k]) { byName[k] = { id: 's' + HV.uid(), name: x.name.trim(), pictoId: x.pictoId, color: x.color, secondary: HV.clone(x.secondary) }; list.push(byName[k]); }
+            x.subjectId = byName[k].id;
+          });
+        }
+        render();
+      }, 'ghost'));
+    }
   }
 
   /* ---------- B. Pictogramas ---------- */
@@ -297,9 +365,9 @@
     if (!draft.customPictos.length) { mine.appendChild(h('p', { 'class': 'hint', text: 'Todavía no has subido ninguna.' })); }
     body.appendChild(mine);
 
-    body.appendChild(h('h3', { text: 'Incorporados' }));
+    body.appendChild(h('h3', { text: 'Incorporados (puedes cambiar su imagen o nombre)' }));
     var built = h('div', { 'class': 'lib-grid' });
-    HV.BUILTIN_PICTOS.forEach(function (p) { built.appendChild(h('div', { 'class': 'lib-item' }, [h('img', { src: p.src, alt: '' }), h('div', { 'class': 'lib-name', text: p.name })])); });
+    HV.BUILTIN_PICTOS.forEach(function (p) { built.appendChild(builtinItem(p)); });
     body.appendChild(built);
   }
   /* Procesa varias imágenes seguidas (reducción + guardado). done() al terminar. */
@@ -310,7 +378,7 @@
       return p.then(function () {
         return UI.processImage(f).then(function (data) {
           var id = 'c-' + HV.uid(), nm = f.name.replace(/.[^.]+$/, '').slice(0, 40);
-          if (!nm || /^image(d*)$/i.test(nm)) { nm = 'Imagen ' + (draft.customPictos.length + 1); } /* iOS nombra todas «image» */
+          if (!nm || /^image\d*$/i.test(nm)) { nm = 'Imagen ' + (draft.customPictos.length + 1); } /* iOS nombra todas «image» */
           draft.customPictos.push({ id: id, name: nm });
           uploadedIds.push(id); okc++;
           return HV.store.saveImage(id, data).then(function (ok) { if (!ok) { UI.toast('Una imagen no se pudo guardar de forma permanente.', 'warn'); } });
@@ -323,11 +391,39 @@
   }
   function pick(cb, current) { UI.pickPicto(draft, cb, current, uploadFiles); }
 
+  /* Pictograma incorporado sustituible (imagen y/o nombre). Se guarda en cfg.overrides. */
+  function builtinItem(p) {
+    var ov = draft.overrides[p.id];
+    var fin = h('input', { type: 'file', accept: 'image/*', style: 'display:none', onchange: function () {
+      var f = this.files && this.files[0]; this.value = '';
+      if (!f) { return; }
+      UI.processImage(f).then(function (data) {
+        var iid = 'o-' + p.id + '-' + HV.uid();
+        return HV.store.saveImage(iid, data).then(function () {
+          uploadedIds.push(iid);
+          var o = draft.overrides[p.id] || { name: '', imageId: '' };
+          o.imageId = iid; draft.overrides[p.id] = o; render();
+        });
+      }, function (err) { UI.toast(err.message, 'warn'); });
+    } });
+    var nameIn = h('input', { type: 'text', value: HV.pictoName(draft, p.id), oninput: function () {
+      var v = this.value.trim(), o = draft.overrides[p.id] || { name: '', imageId: '' };
+      o.name = (v === p.name) ? '' : v;
+      if (!o.name && !o.imageId) { delete draft.overrides[p.id]; } else { draft.overrides[p.id] = o; }
+      refreshStatus();
+    } });
+    return h('div', { 'class': 'lib-item' }, [
+      h('img', { src: HV.pictoSrc(draft, p.id), alt: '' }), nameIn, fin,
+      btn('Cambiar imagen', function () { fin.click(); }, ''),
+      ov ? btn('Restaurar original', function () { delete draft.overrides[p.id]; render(); }, 'ghost') : null
+    ]);
+  }
+
   function countUse(id) {
     var n = 0;
-    for (var d = 1; d <= 7; d++) {
-      draft.days[d].forEach(function (a) { if (a.pictoId === id) { n++; } a.secondary.forEach(function (s) { if (s.pictoId === id) { n++; } }); });
-    }
+    function cnt(x) { if (x.pictoId === id) { n++; } x.secondary.forEach(function (q) { if (q.pictoId === id) { n++; } }); }
+    draft.subjects.forEach(cnt);
+    for (var d = 1; d <= 7; d++) { draft.days[d].forEach(function (x) { if (!x.subjectId) { cnt(x); } }); }
     return n;
   }
 
@@ -423,12 +519,12 @@
       h('h3', { text: 'Copia de seguridad' }),
       h('div', { 'class': 'row' }, [
         btn('Exportar a archivo', function () { exportFile(ta); }, 'primary'),
-        btn('Compartir / guardar…', function () { shareText(ta, JSON.stringify(HV.store.exportAll(saved), null, 1), 'horario-visual-' + HV.dayKey(new Date()) + '.json'); }, ''),
-        btn('Copiar texto', function () { ta.value = JSON.stringify(HV.store.exportAll(saved), null, 1); copyText(ta); }, ''),
+        btn('Compartir / guardar…', function () { shareText(ta, JSON.stringify(HV.store.exportAll(currentForExport()), null, 1), 'horario-visual-' + HV.dayKey(new Date()) + '.json'); }, ''),
+        btn('Copiar texto', function () { ta.value = JSON.stringify(HV.store.exportAll(currentForExport()), null, 1); copyText(ta); }, ''),
         btn('Importar desde archivo…', function () { fileIn.click(); }, ''),
         btn('Importar el texto de abajo', doImport, '')
       ]),
-      h('p', { 'class': 'hint', text: 'Exporta lo que está GUARDADO. En iOS 12 no se pueden descargar archivos: usa «Compartir / guardar…» (Notas, Correo, AirDrop) o «Copiar texto» y pégalo en Notas. Para importar, pega el texto en el cuadro y pulsa «Importar el texto de abajo».' }),
+      h('p', { 'class': 'hint', text: 'La copia incluye lo que ves ahora (también los cambios e imágenes aún sin guardar), pero pulsa Guardar para conservarlos en este iPad. En iOS 12 no se pueden descargar archivos: usa «Compartir / guardar…» (Notas, Correo, AirDrop) o «Copiar texto» y pégalo en Notas. Para importar, pega el texto en el cuadro y pulsa «Importar el texto de abajo».' }),
       fileIn, ta
     ]));
     body.appendChild(h('div', { 'class': 'card' }, [
@@ -444,8 +540,16 @@
     ]));
   }
 
+  /* Lo que se exporta es el borrador actual (lo que se ve), con sus imágenes. */
+  function currentForExport() {
+    var c = HV.migrate(draft);
+    for (var d = 1; d <= 7; d++) { c.days[d] = HV.sortDay(c.days[d]); }
+    if (isDirty()) { UI.toast('La copia incluye cambios sin guardar.', 'warn'); }
+    return c;
+  }
+
   function exportFile(ta) {
-    var text = JSON.stringify(HV.store.exportAll(saved), null, 1);
+    var text = JSON.stringify(HV.store.exportAll(currentForExport()), null, 1);
     var name = 'horario-visual-' + HV.dayKey(new Date()) + '.json';
     ta.value = text;
     try {
