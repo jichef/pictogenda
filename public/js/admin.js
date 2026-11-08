@@ -276,6 +276,18 @@
     if (!isSub) { fields.push(h('div', { 'class': 'row' }, [h('label', { text: 'Inicio ' }, timeIn('start')), h('label', { text: 'Fin ' }, timeIn('end'))])); }
     if (sb) { fields.push(btn('Editar esta asignatura…', function () { tab = 'subjects'; render(); }, 'ghost')); }
     else { fields.push(colors); }
+    if (!isSub && !sb) { /* aviso: actividad suelta con el nombre de una asignatura existente */
+      var nm = String(a.name).trim().toLowerCase(), twin = null;
+      if (nm) { draft.subjects.forEach(function (s) { if (!twin && s.name.trim().toLowerCase() === nm) { twin = s; } }); }
+      if (twin) {
+        fields.push(h('div', { 'class': 'hint' }, [
+          'Existe la asignatura «' + twin.name + '» pero esta actividad no está vinculada; puede verse distinto. ',
+          btn('Vincular', function () {
+            a.subjectId = twin.id; a.name = twin.name; a.pictoId = twin.pictoId; a.color = twin.color; a.secondary = HV.clone(twin.secondary); render();
+          }, 'ghost')
+        ]));
+      }
+    }
     card.appendChild(h('div', { 'class': 'act-main' }, [thumb, h('div', { 'class': 'act-fields' }, fields), tools]));
 
     /* pictogramas secundarios */
@@ -433,7 +445,7 @@
     function toggle(key, label) {
       return h('label', { 'class': 'check' }, [h('input', { type: 'checkbox', checked: s[key], onchange: function () { s[key] = this.checked; refreshStatus(); preview(); } }), ' ' + label]);
     }
-    var prev = h('div', { 'class': 'prev-box' }, [h('img', { src: 'pictos/matematicas.svg', alt: '' }), h('div', { 'class': 'prev-cover' })]);
+    var prev = h('div', { 'class': 'prev-box' }, [h('img', { src: HV.pictoSrc(draft, 'b-matematicas'), alt: '' }), h('div', { 'class': 'prev-cover' })]);
     function preview() {
       var c = prev.lastChild;
       c.style.background = HV.coverBackground(s.coverColor, s.coverOpacity);
