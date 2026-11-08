@@ -527,17 +527,17 @@
         HV.app.applyConfig(res.cfg, res); UI.toast(res.ok ? 'Copia importada ✓' : 'Importada, pero NO se pudo guardar', res.ok ? 'ok' : 'warn'); render();
       });
     }
+    var outBox = h('div', { 'class': 'out-box' });
     body.appendChild(h('div', { 'class': 'card' }, [
       h('h3', { text: 'Copia de seguridad' }),
       h('div', { 'class': 'row' }, [
-        btn('Exportar a archivo', function () { exportFile(ta); }, 'primary'),
-        btn('Compartir / guardar…', function () { shareText(ta, JSON.stringify(HV.store.exportAll(currentForExport()), null, 1), 'horario-visual-' + HV.dayKey(new Date()) + '.json'); }, ''),
-        btn('Copiar texto', function () { ta.value = JSON.stringify(HV.store.exportAll(currentForExport()), null, 1); copyText(ta); }, ''),
+        btn('1. Preparar copia', function () { prepareExport(ta, outBox); }, 'primary'),
         btn('Importar desde archivo…', function () { fileIn.click(); }, ''),
-        btn('Importar el texto de abajo', doImport, '')
+        btn('Importar el texto de abajo', doImport, ''),
+        btn('Comprobar el texto de abajo', function () { checkText(ta); }, 'ghost')
       ]),
-      h('p', { 'class': 'hint', text: 'La copia incluye lo que ves ahora (también los cambios e imágenes aún sin guardar), pero pulsa Guardar para conservarlos en este iPad. En iOS 12 no se pueden descargar archivos: usa «Compartir / guardar…» (Notas, Correo, AirDrop) o «Copiar texto» y pégalo en Notas. Para importar, pega el texto en el cuadro y pulsa «Importar el texto de abajo».' }),
-      fileIn, ta
+      h('p', { 'class': 'hint', text: 'La copia incluye lo que ves ahora (también los cambios e imágenes aún sin guardar), pero pulsa Guardar para conservarlos en este iPad. Pulsa «1. Preparar copia»: se genera el archivo y después aparecen los botones para descargarlo, compartirlo o copiar el texto. Para importar, pega el texto en el cuadro y pulsa «Importar el texto de abajo».' }),
+      outBox, fileIn, ta
     ]));
     body.appendChild(h('div', { 'class': 'card' }, [
       h('h3', { text: 'Restaurar configuración inicial' }),
@@ -558,6 +558,43 @@
     for (var d = 1; d <= 7; d++) { c.days[d] = HV.sortDay(c.days[d]); }
     if (isDirty()) { UI.toast('La copia incluye cambios sin guardar.', 'warn'); }
     return c;
+  }
+
+  /* Paso 1: genera la copia. Paso 2: botones reales (cada uno actúa en su propio toque, como exige iOS). */
+  function prepareExport(ta, box) {
+    var text = JSON.stringify(HV.store.exportAll(currentForExport()), null, 1);
+    var name = 'horario-visual-' + HV.dayKey(new Date()) + '.json';
+    var kb = Math.max(1, Math.round(text.length / 1024));
+    var expected = Object.keys(HV.store.parseBackup(text).images).length;
+    ta.value = text; UI.clear(box);
+    box.appendChild(h('p', { 'class': 'hint', text: 'Copia lista: ' + name + ' (' + kb + ' KB).' }));
+    var row = h('div', { 'class': 'row' });
+    var canBlob = window.Blob && window.URL && window.URL.createObjectURL;
+    if (canBlob) {
+      var url = window.URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+      var a = h('a', { 'class': 'btn primary', href: url, text: 'Descargar archivo' });
+      if ('download' in a) { a.setAttribute('download', name); } else { a.setAttribute('target', '_blank'); } /* iOS 12: se abre y se guarda con el botón Compartir de Safari */
+      row.appendChild(a);
+    }
+    if (navigator.share) { row.appendChild(btn('Compartir…', function () { shareText(ta, text, name); }, '')); }
+    row.appendChild(btn('Copiar texto', function () { copyText(ta); }, ''));
+    row.appendChild(btn('Comprobar texto', function () { checkText(ta, expected); }, 'ghost'));
+    box.appendChild(row);
+    if (canBlob && !('download' in document.createElement('a'))) {
+      box.appendChild(h('p', { 'class': 'hint', text: 'En este iPad «Descargar archivo» abre el contenido en otra pestaña: pulsa el botón Compartir de Safari y elige «Guardar en Archivos» o copia el texto.' }));
+    }
+  }
+
+  /* Comprueba, sin importar nada, que el texto del cuadro es una copia completa. */
+  function checkText(ta, expected) {
+    var b, n = 0, d;
+    try { b = HV.store.parseBackup(ta.value); } catch (e) { window.alert('El texto NO es una copia válida (¿está cortado?): ' + e.message); return; }
+    for (d = 1; d <= 7; d++) { n += b.cfg.days[d].length; }
+    var imgs = Object.keys(b.images).length;
+    var ok = expected === undefined || imgs === expected;
+    var msg = (ok ? 'Copia correcta ✓' : 'Copia INCOMPLETA ⚠') + '\n' + n + ' actividades, ' + b.cfg.subjects.length + ' asignaturas, ' + imgs + ' imágenes';
+    msg += (expected === undefined ? '' : ' (esperadas ' + expected + ')') + '.\nNo se ha modificado nada.';
+    window.alert(msg);
   }
 
   function exportFile(ta) {
