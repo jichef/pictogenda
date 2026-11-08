@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Horario visual</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Horario">
+<meta name="theme-color" content="#f4f7fb">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="anim">
+<div id="app">
+  <div id="main">
+    <div id="content">
+      <div id="titleRow">
+        <h1 id="actName"></h1>
+        <div id="subtitle"></div>
+      </div>
+      <div id="stage">
+        <div id="pbox">
+          <img id="pimg" src="pictos/vacio.svg" alt="">
+          <div id="coverClip"><div id="cover"></div></div>
+          <div id="marks"></div>
+        </div>
+      </div>
+      <div id="secondary" class="secondary n0"></div>
+      <div id="info">
+        <div id="times"></div>
+        <div id="counterWrap"><span id="counterLabel"></span> <span id="counter"></span></div>
+        <div id="nextCard"></div>
+      </div>
+      <div id="pbar"><div id="pbarFill"></div></div>
+    </div>
+    <button id="warn" type="button" aria-label="Aviso de almacenamiento" style="display:none">!</button>
+    <button id="gear" type="button" aria-label="Ajustes">&#9881;</button>
+  </div>
+  <div id="side" class="scrollable"><div id="sideList"></div></div>
+</div>
+<div id="adminRoot" style="display:none"></div>
+<div id="modalRoot"></div>
+<div id="boot">Cargando…</div>
+<noscript><p style="padding:2em">Esta aplicación necesita JavaScript.</p></noscript>
+<script>
+/* Si algún script falla en un Safari antiguo, mostrar el motivo en pantalla. */
+window.onerror = function (m, u, l) {
+  var b = document.getElementById('boot');
+  if (b) { b.style.display = 'block'; b.textContent = 'Error: ' + m + ' (' + String(u).split('/').pop() + ':' + l + ')'; }
+};
+</script>
+<script src="js/core.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/kiosk.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

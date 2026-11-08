@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 2,
+  "savedAt": "",
+  "sameEveryDay": true,
+  "settings": {
+    "coverColor": "#3d5a80",
+    "coverOpacity": 0.6,
+    "showInfoBar": false,
+    "showCounter": true,
+    "showTimes": true,
+    "showProgressBar": true,
+    "pictoSize": "large",
+    "transitions": true,
+    "showFullSidebar": true,
+    "showMarks": true,
+    "milestones": "25-50-75",
+    "milestoneEffect": true
+  },
+  "customPictos": [],
+  "days": {
+    "1": [
+      {
+        "id": "mat",
+        "name": "Matemáticas",
+        "start": "09:00",
+        "end": "10:00",
+        "pictoId": "b-matematicas",
+        "color": "#e8505b",
+        "secondary": [
+          {
+            "pictoId": "b-calculo",
+            "label": "Cálculo"
+          },
+          {
+            "pictoId": "b-problemas",
+            "label": "Problemas"
+          },
+          {
+            "pictoId": "b-cuaderno",
+            "label": "Cuaderno"
+          },
+          {
+            "pictoId": "b-material",
+            "label": "Material"
+          }
+        ]
+      },
+      {
+        "id": "len",
+        "name": "Lengua",
+        "start": "10:00",
+        "end": "11:00",
+        "pictoId": "b-lengua",
+        "color": "#2a9d8f",
+        "secondary": [
+          {
+            "pictoId": "b-lectura",
+            "label": "Lectura"
+          },
+          {
+            "pictoId": "b-cuaderno",
+            "label": "Cuaderno"
+          }
+        ]
+      },
+      {
+        "id": "rec",
+        "name": "Recreo",
+        "start": "11:00",
+        "end": "11:30",
+        "pictoId": "b-recreo",
+        "color": "#f4a261",
+        "secondary": []
+      },
+      {
+        "id": "cie",
+        "name": "Ciencias",
+        "start": "11:30",
+        "end": "12:30",
+        "pictoId": "b-ciencias",
+        "color": "#5a9e3a",
+        "secondary": []
+      },
+      {
+        "id": "ing",
+        "name": "Inglés",
+        "start": "12:30",
+        "end": "13:30",
+        "pictoId": "b-ingles",
+        "color": "#6c63c7",
+        "secondary": []
+      },
+      {
+        "id": "pla",
+        "name": "Plástica",
+        "start": "13:30",
+        "end": "14:00",
+        "pictoId": "b-plastica",
+        "color": "#d6609b",
+        "secondary": []
+      }
+    ],
+    "2": [],
+    "3": [],
+    "4": [],
+    "5": [],
+    "6": [],
+    "7": []
+  }
+}
